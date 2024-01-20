@@ -1,1 +1,1 @@
-# CSC540 Final Project - Media Streaming Service
+# CSC540 Final Project - Database for Media Streaming Service
