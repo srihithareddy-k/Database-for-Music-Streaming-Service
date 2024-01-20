@@ -1,0 +1,118 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+//import java.sql.Savepoint;
+
+/**
+ * 
+ * Acknowledgments: This example is a modification of code provided by Dimitri
+ * Rakitine. Further modified by Shrikanth N C for MySql(MariaDB) support.
+ * Replace all $USER$ with your unity id and $PASSWORD$ with your 9 digit
+ * student id or updated password (if changed)
+ * 
+ */
+
+public class p3_test {
+	static final String jdbcURL = "jdbc:mariadb://classdb2.csc.ncsu.edu:3306/cwjames2";
+	// Put your oracle ID and password here
+
+	private static Connection connection = null;
+	private static Statement statement = null;
+	private static ResultSet result = null;
+
+	public static void main(String[] args) {
+
+		initialize();
+
+		/*try {
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}*/
+		// ***********************************************************************
+		close();
+	}
+
+	private static void initialize() {
+		try {
+			connectToDatabase();
+			clear_tables();
+			
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void connectToDatabase() throws ClassNotFoundException, SQLException {
+		Class.forName("org.mariadb.jdbc.Driver");
+
+		String user = "cwjames2";
+		String password = "batcave";
+
+		connection = DriverManager.getConnection(jdbcURL, user, password);
+		statement = connection.createStatement();
+	}
+
+	private static void close() {
+		if (connection != null) {
+			try {
+				connection.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		if (statement != null) {
+			try {
+				statement.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		if (result != null) {
+			try {
+				result.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private static void clear_tables() {
+		//try {
+			statement.executeUpdate("drop table podcastGenre");
+			statement.executeUpdate("drop table songGenre");
+			statement.executeUpdate("drop table podcastSubscriptions");
+			statement.executeUpdate("drop table artistSubscriptions");
+			statement.executeUpdate("drop table episodeGuests");
+			statement.executeUpdate("drop table sponsoredBy");
+			statement.executeUpdate("drop table songsInAlbum");
+			statement.executeUpdate("drop table albumBy");
+			statement.executeUpdate("drop table artistsIn");
+			statement.executeUpdate("drop table userPaymentHistory");
+			statement.executeUpdate("drop table users");
+			statement.executeUpdate("drop table royaltyPaymentHistory");
+			statement.executeUpdate("drop table artistPaymentHistory");
+			statement.executeUpdate("drop table playCountHistory");
+			statement.executeUpdate("drop table artists");
+			statement.executeUpdate("drop table songs");
+			statement.executeUpdate("drop table albums");
+			statement.executeUpdate("drop table labels");
+			statement.executeUpdate("drop table genres");
+			statement.executeUpdate("drop table sponsors");
+			statement.executeUpdate("drop table guests");
+			statement.executeUpdate("drop table ratingHistory");
+			statement.executeUpdate("drop table hostPaymentHistory");
+			statement.executeUpdate("drop table listeningCountHistory");
+			statement.executeUpdate("drop table episodes");
+			statement.executeUpdate("drop table podcasts");
+			statement.executeUpdate("drop table hosts");
+		//} catch (SQLException e) {
+			//e.printStackTrace();
+		//}
+	}
+
+}

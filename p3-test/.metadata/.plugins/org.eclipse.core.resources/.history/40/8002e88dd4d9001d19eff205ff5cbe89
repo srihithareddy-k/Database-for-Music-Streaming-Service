@@ -1,0 +1,799 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Scanner;
+//import java.sql.Savepoint;
+
+/**
+ * Team Y CSC540 Project 3 Demo Code
+ * This directory should work directly with Eclipse.
+ * You will probably need to update the path to the mariadb-java-client (in referenced libraries)
+ * Right click, configure build path..., edit
+ * The jar file is in this folder
+ * YOU MUST FILL IN "unityID" and "PASSWORD" with your credentials!
+ */
+
+public class p3_test {
+	static final String jdbcURL = "jdbc:mariadb://classdb2.csc.ncsu.edu:3306/cwjames2";
+	// Put your oracle ID and password here
+
+	private static Connection connection = null;
+	private static Statement statement = null;
+	private static ResultSet result = null;
+	private static Scanner input = new Scanner(System.in);
+
+	public static void main(String[] args) {
+		
+		
+		initialize();
+		System.out.println("Initialization complete.\n");
+		System.out.println("Welcome to Wolfmedia!\n");
+		try {
+			while ( main_menu() ) ; //call main menu until user exits
+		}
+		catch (SQLException e) {
+			System.out.println("SQL Query Failed. Please verify your input.");
+		}
+
+		/*try {
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}*/
+		// ***********************************************************************
+		close();
+	}
+	
+	private static boolean main_menu() throws SQLException {
+		int select;
+		
+		System.out.print("What would you like to do? (input the number to select)\n"
+				+ "1 - Information Processing\n"
+				+ "2 - Maintaining Metadata and Records\n"
+				+ "3 - Maintaining Payments\n"
+				+ "4 - Reports\n"
+				+ "0 - Exit\n"
+				+ "\nSelect: ");		
+		try {
+			select = Integer.parseInt(input.nextLine());
+			} catch (Exception e) {
+			select = -1;
+		}
+		switch (select) {
+		case 1:
+			System.out.println("1!\n");
+			break;
+		case 2:
+			System.out.println("2!\n");
+			break;
+		case 3:
+			while (payments_menu()) ;
+			break;
+		case 4:
+			while (reports_menu()) ;
+			break;
+		case 0:
+			System.out.println("Goodbye!\n");
+			return false; //exit the program
+		default:
+			System.out.println("Please try again.  Enter only the number.\n");
+			break;
+		}
+		return true;
+	}
+	
+	private static boolean payments_menu() throws SQLException {
+		int select;
+		String ID;
+		String[] artists;
+		int i = 0;
+		int num_artists = 0;
+		
+		System.out.print("\nMaintaining Payments: What would you like to do?\n"
+				  + "1 - Make Royalty Payment For Song\n" 
+				  + "2 - Make Payment To Podcast Host \n" 
+				  + "3 - Collect Subscriber Payment\n"
+				  + "0 - Exit\n"
+				  + "\nSelect: ");
+		
+		try {
+			select = Integer.parseInt(input.nextLine());
+			} catch (Exception e) {
+			select = -1;
+		}
+		switch (select) {
+		case 1:
+			System.out.print("Enter Song ID (use 'help' if needed): ");
+			ID = input.nextLine();
+			if ( ID.equals("help") ) {
+				result = statement.executeQuery("SELECT ID, title FROM songs");
+				printResultSet(result);
+			}
+			else {
+				//get number of artists that need to receive payments
+				result = statement.executeQuery("SELECT COUNT(artist_ID) FROM artistsIn "
+											  + "WHERE song_ID = '" + ID + "'");
+				try {
+					result.next();
+					num_artists = Integer.parseInt(result.getString(1));
+				} catch (Exception e) {
+					System.out.println("parsing result failed");
+				}
+				
+				//get artists who are receiving payments
+				result = statement.executeQuery("SELECT artist_ID FROM artistsIn "
+						  + "WHERE song_ID = '" + ID + "'");
+				while (result.next()) {
+					artists[i] = result.getString(1);
+				}
+				for (int j = 0; j < num_artists; j++) println(artists[j]);
+			}
+			break;
+		case 2:
+			
+			break;
+		case 3:
+			
+			break;
+		case 0:
+			return false; //exit this menu
+		default:
+			System.out.println("Please try again.  Enter only the number.\n");
+			break;
+		}
+		return true;
+	}
+	
+	private static boolean reports_menu() throws SQLException {
+		int select;
+		
+		System.out.print("\nReports: What would you like to do?\n"
+						  + "1 - Play Count Report\n" 
+						  + "2 - Outgoing Payment Report\n" 
+						  + "3 - Total Revenue Report\n"
+						  + "4 - Songs In Album\n"
+						  + "5 - Songs By Artist\n"
+						  + "6 - Episodes From Podcast\n"
+						  + "0 - Exit\n"
+						  + "\nSelect: ");
+		
+		try {
+			select = Integer.parseInt(input.nextLine());
+			} catch (Exception e) {
+			select = -1;
+		}
+		switch (select) {
+		case 1:
+			while (play_count_menu()) ;
+			break;
+		case 2:
+			System.out.println("2!\n");
+			break;
+		case 3:
+			System.out.println("3!\n");
+			break;
+		case 4:
+			System.out.println("4!\n");
+			break;
+		case 0:
+			return false; //exit this menu
+		default:
+			System.out.println("Please try again.  Enter only the number.\n");
+			break;
+		}
+		return true;
+	}
+	
+	private static boolean play_count_menu() throws SQLException{
+		int select;
+		String ID;
+		
+		System.out.println("Monthly Play Count Report: \n"
+				+ "1 - Song\n2 - Album\n3 - Artist\n"
+				+ "4 - Episode\n5 - Podcast\n6 - Host\n0 - Back\n"
+				+ "\nSelect: ");
+		try {
+			select = Integer.parseInt(input.nextLine());
+			} catch (Exception e) {
+			select = -1;
+		}
+		
+		switch (select) {
+		case 1:
+			System.out.print("Enter Song ID (use 'help' if needed): ");
+			ID = input.nextLine();
+			if ( ID.equals("help") ) {
+				result = statement.executeQuery("SELECT ID, title FROM songs");
+				printResultSet(result);
+			}
+			else {
+				result = statement.executeQuery("SELECT * FROM playCountHistory "
+											  + "WHERE song_ID = '" + ID + "'");
+				printResultSet(result);
+			}
+			break;
+		case 2:
+			System.out.print("Enter Album ID (use 'help' if needed): ");
+			ID = input.nextLine();
+			if ( ID.equals("help") ) {
+				result = statement.executeQuery("SELECT ID, name FROM albums");
+				printResultSet(result);
+			}
+			else {
+				result = statement.executeQuery("SELECT album_ID, month, year, SUM(p.play_count) as play_count\n"
+						+ "FROM playCountHistory p JOIN songs s ON s.ID = p.song_ID\n"
+						+ "WHERE album_ID = '" + ID + "'\n"
+						+ "GROUP BY album_ID, month, year");
+				printResultSet(result);
+			}
+			break;
+		case 3:
+			System.out.print("Enter Artist ID (use 'help' if needed): ");
+			ID = input.nextLine();
+			if ( ID.equals("help") ) {
+				result = statement.executeQuery("SELECT ID, name FROM artists");
+				printResultSet(result);
+			}
+			else {
+				result = statement.executeQuery("SELECT artist_ID, month, year, SUM(p.play_count) as play_count\n"
+						+ "FROM playCountHistory p JOIN artistsIn a ON a.song_ID = p.song_ID\n"
+						+ "WHERE artist_ID = '" + ID + "'\n"
+						+ "GROUP BY artist_ID, month, year");
+				printResultSet(result);
+			}
+			break;
+		case 4:
+			System.out.print("Enter Episode ID (use 'help' if needed): ");
+			ID = input.nextLine();
+			if ( ID.equals("help") ) {
+				result = statement.executeQuery("SELECT ID, title FROM episodes");
+				printResultSet(result);
+			}
+			else {
+				result = statement.executeQuery("SELECT * FROM listeningCountHistory "
+						+ "WHERE ep_ID = '" + ID + "'");
+				printResultSet(result);
+			}
+			break;
+		case 5:
+			
+			break;
+		case 6:
+			
+			break;
+		case 0:
+			return false; //exit this menu
+		default:
+			System.out.println("Please try again.  Enter only the number.\n");
+			break;
+		}
+		return true;
+		//catch (SQLException e) {
+		//	System.out.println("Query failed.  Make sure the ID is valid.");
+		//}
+	}
+	
+	private static void printResultSet(ResultSet rs) throws SQLException
+	{
+	    ResultSetMetaData rsmd = rs.getMetaData();
+	    int col = rsmd.getColumnCount();
+	    for (int i = 1; i <= col; i++) {
+	    	if (i > 1) System.out.print(" | ");
+	    	System.out.print(rsmd.getColumnName(i));
+	    }
+	    System.out.println("");
+	    while (rs.next()) {
+	        for (int i = 1; i <= col; i++) {
+	            if (i > 1) System.out.print(" | ");
+	            System.out.print(rs.getString(i));
+	        }
+	        System.out.println("");
+	    }
+	    System.out.println("");
+	}
+	
+	private static void initialize() {
+		try {
+			connectToDatabase();
+			clear_tables();
+			create_tables();
+			insert_sample_data();
+			insert_bonus_data();
+			
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void connectToDatabase() throws ClassNotFoundException, SQLException {
+		Class.forName("org.mariadb.jdbc.Driver");
+
+		String user = "cwjames2";
+		String password = "batcave";
+
+		connection = DriverManager.getConnection(jdbcURL, user, password);
+		statement = connection.createStatement();
+	}
+
+	private static void close() {
+		if (connection != null) {
+			try {
+				connection.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		if (statement != null) {
+			try {
+				statement.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		if (result != null) {
+			try {
+				result.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private static void clear_tables() {
+		try {
+			statement.executeUpdate("drop table podcastGenre");
+			statement.executeUpdate("drop table songGenre");
+			statement.executeUpdate("drop table podcastSubscriptions");
+			statement.executeUpdate("drop table artistSubscriptions");
+			statement.executeUpdate("drop table episodeGuests");
+			statement.executeUpdate("drop table sponsoredBy");
+			statement.executeUpdate("drop table songsInAlbum");
+			statement.executeUpdate("drop table albumBy");
+			statement.executeUpdate("drop table artistsIn");
+			statement.executeUpdate("drop table userPaymentHistory");
+			statement.executeUpdate("drop table users");
+			statement.executeUpdate("drop table royaltyPaymentHistory");
+			statement.executeUpdate("drop table artistPaymentHistory");
+			statement.executeUpdate("drop table playCountHistory");
+			statement.executeUpdate("drop table artists");
+			statement.executeUpdate("drop table songs");
+			statement.executeUpdate("drop table albums");
+			statement.executeUpdate("drop table labels");
+			statement.executeUpdate("drop table genres");
+			statement.executeUpdate("drop table sponsors");
+			statement.executeUpdate("drop table guests");
+			statement.executeUpdate("drop table ratingHistory");
+			statement.executeUpdate("drop table hostPaymentHistory");
+			statement.executeUpdate("drop table listeningCountHistory");
+			statement.executeUpdate("drop table episodes");
+			statement.executeUpdate("drop table podcasts");
+			statement.executeUpdate("drop table hosts");
+		} catch (SQLException e) {
+			System.out.println("No tables dropped.  Schema was empty.\n");
+		}
+	}
+	
+	private static void insert_bonus_data() throws SQLException {
+		try {
+			statement.executeUpdate("INSERT INTO listeningCountHistory\n"
+					+ "VALUES\n"
+					+ "    ('pe7001', 1, 2023, 150),\n"
+					+ "    ('pe7001', 2, 2023, 250),\n"
+					+ "    ('pe7001', 3, 2023, 350),\n"
+					+ "    ('pe7002', 1, 2023, 1050),\n"
+					+ "    ('pe7002', 2, 2023, 2050),\n"
+					+ "    ('pe7002', 3, 2023, 3050)");
+		} catch (SQLException e) {
+			System.out.print("SQL error while inputting bonus data.\n");
+		}
+	}
+	
+	private static void insert_sample_data() {
+		try {
+			statement.executeUpdate("INSERT INTO genres VALUES ('Alternative'), ('Pop')");
+			statement.executeUpdate("INSERT INTO labels\n"
+					+ "			VALUES\n"
+					+ "			    ('rl3001', 'Elevate Records'),\n"
+					+ "			    ('rl3002', 'Melodic Avenue Music')");
+			statement.executeUpdate("INSERT INTO artists\n"
+					+ "VALUES\n"
+					+ "    ('ar2001', 'Forest', 'active', 'band', 'USA', 'Alternative', 25, 'rl3001'),\n"
+					+ "    ('ar2002', 'Rain', 'active', 'band', 'USA', 'Pop', 55, 'rl3002')");
+			statement.executeUpdate("INSERT INTO albums\n"
+					+ "VALUES\n"
+					+ "    ('al4001', 'Electric Oasis', 2018, 'Limited'),\n"
+					+ "    ('al4002', 'Lost in the Echoes', 2018, 'Platinum')");
+			statement.executeUpdate("INSERT INTO songs\n"
+					+ "VALUES\n"
+					+ "    ('s1001','Electric Dreamscape','al4001',500,'2018-01-01', 'USA', 'English', 0.10, 0, 'rl3001'),\n"
+					+ "    ('s1002','Midnight Mirage','al4001',1000,'2018-01-01', 'USA', 'English', 0.10, 0, 'rl3001'),\n"
+					+ "    ('s1003','Echoes of You','al4002',100,'2018-03-01', 'USA', 'English', 0.10, 0, 'rl3002'),\n"
+					+ "    ('s1004','Rainy Nights','al4002',200,'2018-03-01', 'USA', 'English', 0.10, 0, 'rl3002')");
+			statement.executeUpdate("INSERT INTO playCountHistory\n"
+					+ "VALUES\n"
+					+ "    ('s1001', 1, 2023, 10),\n"
+					+ "    ('s1001', 2, 2023, 20),\n"
+					+ "    ('s1001', 3, 2023, 30),\n"
+					+ "    ('s1002', 1, 2023, 100),\n"
+					+ "    ('s1002', 2, 2023, 200),\n"
+					+ "    ('s1002', 3, 2023, 300),\n"
+					+ "    ('s1003', 1, 2023, 1000),\n"
+					+ "    ('s1003', 2, 2023, 2000),\n"
+					+ "    ('s1003', 3, 2023, 3000),\n"
+					+ "    ('s1004', 1, 2023, 10000),\n"
+					+ "    ('s1004', 2, 2023, 20000),\n"
+					+ "    ('s1004', 3, 2023, 30000)");
+			statement.executeUpdate("INSERT INTO hosts\n"
+					+ "VALUES\n"
+					+ "    ('ph6001', 'Matthew', 'Wilson', '123-456-7890', 'matt@mail.com', 'Raleigh')");
+			statement.executeUpdate("INSERT INTO podcasts\n"
+					+ "VALUES \n"
+					+ "    ('p5001', 'Mind Over Matter: Exploring the Power of the Human Mind',"
+					+ "     'ph6001', 'English', 'USA', 5, 10, 10, 4.5, 0)");
+			statement.executeUpdate("INSERT INTO episodes\n"
+					+ "VALUES\n"
+					+ "    ('pe7001', 'p5001', 1, 'The Science of Mindfulness', 30, '2019-01-02', 100, 0),\n"
+					+ "    ('pe7002', 'p5001', 2, 'Unlocking Your Potential', 30, '2019-02-02', 200, 0)");
+			statement.executeUpdate("INSERT INTO users\n"
+					+ "VALUES\n"
+					+ "    ('u8001', 'Alex', 'A', '111-222-3333', 'alex@mail.com', '2017-01-03', 'S', 10),\n"
+					+ "    ('u8002', 'John', 'J', '222-333-4444', 'john@mail.com', '2017-01-04', 'S', 10)");
+			statement.executeUpdate("INSERT INTO artistPaymentHistory(artist_ID, month, year, amount)\n"
+					+ "VALUES\n"
+					+ "    ('ar2001', 1, 2023, 4.2),\n"
+					+ "    ('ar2001', 2, 2023, 8.4),\n"
+					+ "    ('ar2001', 3, 2023, 12.6),\n"
+					+ "    ('ar2002', 1, 2023, 703.5),\n"
+					+ "    ('ar2002', 2, 2023, 1547),\n"
+					+ "    ('ar2002', 3, 2023, 2320.5)");
+			statement.executeUpdate("INSERT INTO royaltyPaymentHistory(label_ID, month, year, amount)\n"
+					+ "VALUES\n"
+					+ "    ('rl3001', 1, 2023, 3.3),\n"
+					+ "    ('rl3001', 2, 2023, 6.6),\n"
+					+ "    ('rl3001', 3, 2023, 9.9),\n"
+					+ "    ('rl3002', 1, 2023, 330),\n"
+					+ "    ('rl3002', 2, 2023, 660),\n"
+					+ "    ('rl3002', 3, 2023, 990)");
+			statement.executeUpdate("INSERT INTO hostPaymentHistory(host_ID, month, year, amount)\n"
+					+ "VALUES\n"
+					+ "    ('ph6001', 1, 2023, 20),\n"
+					+ "    ('ph6001', 2, 2023, 30),\n"
+					+ "    ('ph6001', 3, 2023, 40)");
+			statement.executeUpdate("INSERT INTO artistsIn\n"
+					+ "VALUES\n"
+					+ "    ('s1001', 'ar2001', 'main'),\n"
+					+ "    ('s1002', 'ar2001', 'main'),\n"
+					+ "    ('s1002', 'ar2002', 'collaborator'),\n"
+					+ "    ('s1003', 'ar2002', 'main'),\n"
+					+ "    ('s1004', 'ar2002', 'main')");
+			statement.executeUpdate("INSERT INTO albumBy\n"
+					+ "VALUES\n"
+					+ "    ('ar2001', 'al4001'),\n"
+					+ "    ('ar2002', 'al4002')");
+			statement.executeUpdate("INSERT INTO songsInAlbum\n"
+					+ "VALUES\n"
+					+ "    ('s1001', 'al4001', 1),\n"
+					+ "    ('s1002', 'al4001', 2),\n"
+					+ "    ('s1003', 'al4002', 1),\n"
+					+ "    ('s1004', 'al4002', 2)");			
+		} catch (SQLException e) {
+			System.out.println("Error while inputting data.  Check that tables were initialized.\n");
+		}
+	}
+	
+	private static void create_tables() {
+		try {
+			statement.executeUpdate("CREATE TABLE genres (\n"
+					+ "    name VARCHAR(30) PRIMARY KEY\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE labels (\n"
+					+ "    ID VARCHAR(10) PRIMARY KEY,\n"
+					+ "    name VARCHAR(50)\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE artists (\n"
+					+ "    ID VARCHAR(10) PRIMARY KEY,\n"
+					+ "    name VARCHAR(50) NOT NULL,\n"
+					+ "    status VARCHAR(7) CHECK (status='active' OR status='retired'),\n"
+					+ "    type VARCHAR(8) CHECK (type='band' OR type='musician' OR type='composer'),\n"
+					+ "    country VARCHAR(30),\n"
+					+ "    primary_genre VARCHAR(30),\n"
+					+ "    monthly_listeners INT DEFAULT 0,\n"
+					+ "    label_ID VARCHAR(10),\n"
+					+ "    FOREIGN KEY(primary_genre) \n"
+					+ "        REFERENCES genres(name)\n"
+					+ "        ON DELETE SET NULL\n"
+					+ "        ON UPDATE SET NULL,\n"
+					+ "    FOREIGN KEY(label_ID) \n"
+					+ "        REFERENCES labels(ID)\n"
+					+ "        ON DELETE SET NULL\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE albums (\n"
+					+ "    ID VARCHAR(10) PRIMARY KEY,\n"
+					+ "    name VARCHAR(50) NOT NULL,\n"
+					+ "    year INT NOT NULL,\n"
+					+ "    edition VARCHAR(15)\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE songs (\n"
+					+ "    ID VARCHAR(10) PRIMARY KEY,\n"
+					+ "    title VARCHAR(50) NOT NULL,\n"
+					+ "    album_ID VARCHAR(10) REFERENCES albums(ID),\n"
+					+ "    play_count INT DEFAULT 0,\n"
+					+ "    release_date DATE NOT NULL,\n"
+					+ "    release_country VARCHAR(30),\n"
+					+ "    language VARCHAR(30),\n"
+					+ "    royalty_rate DECIMAL(10,2) DEFAULT 0,\n"
+					+ "    royalty_paid BIT DEFAULT 0,\n"
+					+ "    label_ID VARCHAR(10),\n"
+					+ "    FOREIGN KEY(album_ID) \n"
+					+ "        REFERENCES albums(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE,\n"
+					+ "    FOREIGN KEY(label_ID) \n"
+					+ "        REFERENCES labels(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE playCountHistory(\n"
+					+ "    song_ID VARCHAR(10),\n"
+					+ "    month INT CHECK (month>0 AND month<13),\n"
+					+ "    year INT,\n"
+					+ "    play_count INT DEFAULT 0,\n"
+					+ "    PRIMARY KEY (song_ID, month, year),\n"
+					+ "    FOREIGN KEY (song_ID)\n"
+					+ "        REFERENCES songs(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE royaltyPaymentHistory(\n"
+					+ "    ID INT PRIMARY KEY AUTO_INCREMENT,\n"
+					+ "    label_ID VARCHAR(10),\n"
+					+ "    month INT CHECK (month>0 AND month<13),\n"
+					+ "    year INT,\n"
+					+ "    amount DECIMAL(10,2) NOT NULL,\n"
+					+ "    FOREIGN KEY (label_ID)\n"
+					+ "        REFERENCES labels(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE artistPaymentHistory(\n"
+					+ "    ID INT PRIMARY KEY AUTO_INCREMENT,\n"
+					+ "    artist_ID VARCHAR(10),\n"
+					+ "    month INT CHECK (month>0 AND month<13),\n"
+					+ "    year INT,\n"
+					+ "    amount DECIMAL(10,2) NOT NULL,\n"
+					+ "    FOREIGN KEY (artist_ID)\n"
+					+ "        REFERENCES artists(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE hosts (\n"
+					+ "    ID VARCHAR(10) PRIMARY KEY,\n"
+					+ "    first_name VARCHAR(50) NOT NULL,\n"
+					+ "    last_name VARCHAR(50) NOT NULL,\n"
+					+ "    phone VARCHAR(30),\n"
+					+ "    email VARCHAR(50),\n"
+					+ "    City VARCHAR(50)\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE podcasts (\n"
+					+ "    ID VARCHAR(10) PRIMARY KEY,\n"
+					+ "    name VARCHAR(100),\n"
+					+ "    host_ID VARCHAR(10),\n"
+					+ "    language VARCHAR(30),\n"
+					+ "    country VARCHAR(30),\n"
+					+ "    ep_count INT DEFAULT 0,\n"
+					+ "    ep_fee DECIMAL DEFAULT 0,\n"
+					+ "    total_subs INT DEFAULT 0,\n"
+					+ "    avg_rating INT DEFAULT 0,\n"
+					+ "    total_ratings INT DEFAULT 0,\n"
+					+ "    FOREIGN KEY(host_ID) \n"
+					+ "        REFERENCES hosts(ID)\n"
+					+ "        ON DELETE SET NULL\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE episodes (\n"
+					+ "    ID VARCHAR(10) PRIMARY KEY,\n"
+					+ "    podcast_ID VARCHAR(10),\n"
+					+ "    ep_num INT,\n"
+					+ "    title VARCHAR(100) NOT NULL,\n"
+					+ "    duration INT,\n"
+					+ "    release_date DATE,\n"
+					+ "    listen_count INT DEFAULT 0,\n"
+					+ "    ad_count INT DEFAULT 0,\n"
+					+ "    FOREIGN KEY(podcast_ID)\n"
+					+ "        REFERENCES podcasts(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE sponsors (\n"
+					+ "    ID INT PRIMARY KEY,\n"
+					+ "    name VARCHAR(50) NOT NULL\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE guests (\n"
+					+ "    ID VARCHAR(10) PRIMARY KEY,\n"
+					+ "    name VARCHAR(50) NOT NULL\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE listeningCountHistory(\n"
+					+ "    ep_ID VARCHAR(10),\n"
+					+ "    month INT CHECK (month > 0 AND month < 13),\n"
+					+ "    year INT,\n"
+					+ "    play_count INT DEFAULT 0,\n"
+					+ "    PRIMARY KEY (ep_ID, month, year),\n"
+					+ "    FOREIGN KEY (ep_ID)\n"
+					+ "        REFERENCES episodes(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE ratingHistory(\n"
+					+ "    podcast_ID VARCHAR(10),\n"
+					+ "    month INT CHECK (month > 0 AND month < 13),\n"
+					+ "    year INT,\n"
+					+ "    avg_rating DECIMAL DEFAULT 0,\n"
+					+ "    PRIMARY KEY(podcast_ID, month, year),\n"
+					+ "    FOREIGN KEY(podcast_ID)\n"
+					+ "        REFERENCES podcasts(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE hostPaymentHistory(\n"
+					+ "    ID INT PRIMARY KEY AUTO_INCREMENT,\n"
+					+ "    host_ID VARCHAR(10),\n"
+					+ "    month INT CHECK (month>0 AND month<13),\n"
+					+ "    year INT,\n"
+					+ "    amount DECIMAL(10,2) NOT NULL,\n"
+					+ "    FOREIGN KEY (host_ID)\n"
+					+ "        REFERENCES hosts(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE users(\n"
+					+ "    ID VARCHAR(10) PRIMARY KEY,\n"
+					+ "    first_name VARCHAR(50) NOT NULL,\n"
+					+ "    last_name VARCHAR(50) NOT NULL,\n"
+					+ "    phone VARCHAR(30),\n"
+					+ "    email VARCHAR(50) NOT NULL,\n"
+					+ "    registration_date DATE,\n"
+					+ "    sub_status CHAR CHECK (sub_status='S' OR sub_status='U'),\n"
+					+ "    sub_fee DECIMAL(10,2) DEFAULT 0\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE userPaymentHistory(\n"
+					+ "    ID INT PRIMARY KEY AUTO_INCREMENT,\n"
+					+ "    user_ID VARCHAR(10),\n"
+					+ "    month INT CHECK (month>0 AND month<13),\n"
+					+ "    year INT,\n"
+					+ "    amount DECIMAL(10,2) NOT NULL,\n"
+					+ "    FOREIGN KEY (user_ID)\n"
+					+ "        REFERENCES users(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE artistsIn(\n"
+					+ "    song_ID VARCHAR(10),\n"
+					+ "    artist_ID VARCHAR(10),\n"
+					+ "    role VARCHAR(15) CHECK (role='main' OR role='collaborator'),\n"
+					+ "    PRIMARY KEY (song_ID, artist_ID),\n"
+					+ "    FOREIGN KEY (song_ID)\n"
+					+ "        REFERENCES songs(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE,\n"
+					+ "        FOREIGN KEY (artist_ID)\n"
+					+ "        REFERENCES artists(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE albumBy(\n"
+					+ "    artist_ID VARCHAR(10),\n"
+					+ "    album_ID VARCHAR(10),\n"
+					+ "    PRIMARY KEY (artist_ID, album_ID),\n"
+					+ "    FOREIGN KEY (artist_ID)\n"
+					+ "        REFERENCES artists(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE,\n"
+					+ "    FOREIGN KEY (album_ID)\n"
+					+ "        REFERENCES albums(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE songsInAlbum(\n"
+					+ "    song_ID VARCHAR(10),\n"
+					+ "    album_ID VARCHAR(10),\n"
+					+ "    track_num INT,\n"
+					+ "    PRIMARY KEY (song_ID, album_ID),\n"
+					+ "    FOREIGN KEY (song_ID)\n"
+					+ "        REFERENCES songs(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE,\n"
+					+ "    FOREIGN KEY (album_ID)\n"
+					+ "        REFERENCES albums(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE sponsoredBy(\n"
+					+ "    sponsor_ID INT,\n"
+					+ "    podcast_ID VARCHAR(10),\n"
+					+ "    PRIMARY KEY (sponsor_ID, podcast_ID),\n"
+					+ "    FOREIGN KEY (sponsor_ID)\n"
+					+ "        REFERENCES sponsors(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE,\n"
+					+ "    FOREIGN KEY (podcast_ID)\n"
+					+ "        REFERENCES podcasts(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE episodeGuests(\n"
+					+ "    ep_ID VARCHAR(10),\n"
+					+ "    guest_ID VARCHAR(10), \n"
+					+ "    PRIMARY KEY (ep_ID, guest_ID),\n"
+					+ "    FOREIGN KEY (ep_ID)\n"
+					+ "        REFERENCES episodes(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE,\n"
+					+ "    FOREIGN KEY (guest_ID)\n"
+					+ "        REFERENCES guests(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE artistSubscriptions(\n"
+					+ "    user_ID VARCHAR(10),\n"
+					+ "    artist_ID VARCHAR(10),\n"
+					+ "    PRIMARY KEY (user_ID, artist_ID),\n"
+					+ "    FOREIGN KEY (user_ID)\n"
+					+ "        REFERENCES users(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE,\n"
+					+ "    FOREIGN KEY (artist_ID)\n"
+					+ "        REFERENCES artists(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE podcastSubscriptions(\n"
+					+ "    user_ID VARCHAR(10),\n"
+					+ "    podcast_ID VARCHAR(10),\n"
+					+ "    PRIMARY KEY (user_ID, podcast_ID),\n"
+					+ "    FOREIGN KEY (user_ID)\n"
+					+ "        REFERENCES users(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE,\n"
+					+ "    FOREIGN KEY (podcast_ID)\n"
+					+ "        REFERENCES podcasts(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE songGenre(\n"
+					+ "    song_ID VARCHAR(10),\n"
+					+ "    genre_name VARCHAR(30),\n"
+					+ "    PRIMARY KEY (song_ID, genre_name),\n"
+					+ "    FOREIGN KEY (song_ID)\n"
+					+ "        REFERENCES songs(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE,\n"
+					+ "    FOREIGN KEY (genre_name)\n"
+					+ "        REFERENCES genres(name)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+			statement.executeUpdate("CREATE TABLE podcastGenre(\n"
+					+ "    podcast_ID VARCHAR(10),\n"
+					+ "    genre_name VARCHAR(30),\n"
+					+ "    PRIMARY KEY (podcast_ID, genre_name),\n"
+					+ "    FOREIGN KEY (podcast_ID)\n"
+					+ "        REFERENCES podcasts(ID)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE,\n"
+					+ "    FOREIGN KEY (genre_name)\n"
+					+ "        REFERENCES genres(name)\n"
+					+ "        ON DELETE CASCADE\n"
+					+ "        ON UPDATE CASCADE\n"
+					+ ")");
+		} catch (SQLException e) {
+			System.out.println("Table creation failed.  Check that schema is empty.\n");
+		}
+	}
+
+}
